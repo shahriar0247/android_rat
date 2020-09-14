@@ -2,6 +2,7 @@ import socket
 import math
 import time
 import struct
+import os
 
 def create_socket(ip, port):
     sock = socket.socket()
@@ -78,9 +79,24 @@ def get_input(client):
     send(client,cmd)
     output = (recv(client))
     return cmd, output
-def downloadfile(output, client):
-    filename = output.replace("downloading ","")[:-1]
+def download(filetype, client, cmd):
+    
+    if filetype == "file\n":
+        downloadfile(client)
 
+    elif filetype == "dir\n":
+        os.mkdir(cmd.replace("download ",""))
+        os.chdir(cmd.replace("download ",""))
+        send(client,"ok")
+        number_of_files = int(recv(client).replace("number_of_files: ",""))
+        send(client,"ok")
+        for a in range(0, number_of_files):
+            downloadfile(client)
+
+def downloadfile(client):
+    filename = recv(client)
+    filename = filename.replace("downloading ","")[:-1]
+    print("starting")
     buf = bytes()
     while len(buf) < 4:
         buf += client.recv(4 - len(buf))
@@ -103,7 +119,7 @@ def commands(cmd, output, client):
 
         output = recv(client)
     if cmd.startswith("download "):
-            downloadfile(output,client)
+            download(output,client, cmd)
 
            
     return output
