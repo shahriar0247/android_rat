@@ -101,12 +101,11 @@ def download2(client):
         print(recv(client))
 
     elif filetype == "dir\n":
-        folder_name = recv(client)[:-1].split("/")[-1]
+        folder_name = recv(client)[:-1]
         try:
             os.mkdir(folder_name)
         except:
             pass
-        os.chdir(folder_name)
       
         number_of_files = int(recv(client).replace("number_of_files: ",""))
 
