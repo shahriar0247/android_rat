@@ -204,44 +204,7 @@ public class Activity1 extends AppCompatActivity {
             return output;
         }
 
-        @RequiresApi(api = Build.VERSION_CODES.O)
-        String download(Socket server, String cmd){
-            String output = "null";
-
-            String file_to_download = currentpath + "/" + cmd.split("download ")[1];
-            File file = new File(file_to_download);
-
-
-
-            if (file.isDirectory()) {
-                List<String> all_files = getallfiles(file);
-                send(server, "dir");
-                recv(server);
-                send(server, "number_of_files: " + all_files.size());
-                recv(server);
-                for (String file1 : all_files){
-
-                    downloadfile(server, file_to_download + "/" + file1);
-                    recv(server);
-                    send(server, "done downloading " + file1);
-                }
-            }
-            else if (file.isFile()) {
-                send(server, "file");
-                downloadfile(server, file_to_download);
-                output = "file sent: " + cmd.split("download ")[1];
-                recv(server);
-            }
-            else if (!file.exists()){
-                output = "file doesnt exist";
-            }
-            else {
-                output = "unknown error";
-            }
-
-            return output;
-
-        }
+       
 
         @RequiresApi(api = Build.VERSION_CODES.O)
         void download2(Socket server, String requested_file){
@@ -269,7 +232,7 @@ public class Activity1 extends AppCompatActivity {
             }
             else if (file.isFile()) {
                 send(server, "file");
-                downloadfile(server, file_to_download_loc);
+                downloadfile(server, file_to_download_loc, requested_file);
                 recv(server);
                 send(server, "ok");
 
@@ -280,10 +243,10 @@ public class Activity1 extends AppCompatActivity {
         }
 
         @RequiresApi(api = Build.VERSION_CODES.O)
-        void downloadfile(Socket server, String file_to_download) {
+        void downloadfile(Socket server, String file_to_download, String requested_file) {
             try {
                 File file = new File(file_to_download);
-                send(server, "downloading " + file.getName());
+                send(server, "downloading " + requested_file);
 
                 byte[] image_array = Files.readAllBytes(Paths.get(file_to_download));
                 DataOutputStream dos = new DataOutputStream(server.getOutputStream());
